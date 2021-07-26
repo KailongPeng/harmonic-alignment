@@ -1,4 +1,4 @@
-# we use this script in the paper to make the corruption experiment.
+# we use this script in the paper to make the corruption experiment. 我们在论文中使用这个脚本来做腐败实验。
 from sklearn import datasets, decomposition, neighbors
 from sklearn.utils.extmath import randomized_svd
 from scipy import stats, sparse
@@ -30,7 +30,7 @@ def knnclassifier(X, X_labels, Y, Y_labels, knn):
     return knn_op.score(Y, Y_labels)
 
 
-def diffusionCoordinates(X, decay, knn, n_pca):
+def diffusionCoordinates(X, decay, knn, n_pca): # 根据原始数据，构建graph，然后形成SVD，输出SVD的输出，也就是三个矩阵
     # diffusion maps with normalized Laplacian
     # n_pca = 0 corresponds to NO pca
     G = graphtools.Graph(X, knn=knn, decay=decay, n_pca=n_pca, use_pygsp=True, thresh=0)
@@ -76,7 +76,8 @@ def build_wavelets(lmbda, n_filters, overlap):
 np.random.seed(42)
 digits = datasets.fetch_openml("mnist_784")
 labels = digits["target"]
-imgs = digits["data"]
+# imgs = digits["data"]
+imgs = np.asarray(digits["data"])
 
 n_samples = 1000
 n_features = 784
