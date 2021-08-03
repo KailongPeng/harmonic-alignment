@@ -24,6 +24,11 @@ def save_obj(obj, name):
 def zscore_data(data):
     return (data-np.expand_dims(np.mean(data,3), 3))/np.expand_dims(np.std(data,3),3)
 
+def getAlignmentMetric(xb1_aligned, xb2_aligned): # align的越好，对应的点的距离越近，因此 metric越小越好 。metric越接近1，就说明对齐得越差，因为对角线上的值和非对角线上的值的相对大小差不多。 因此metric的range是【0，正无穷】，超过1时就很差了
+    distanceMatrix = scipy.spatial.distance_matrix(xb1_aligned, xb2_aligned) # xb1_aligned 和 xb2_aligned 都有 M 个数据点，N维度，因此 distanceMatrix 就是 M x M 维度。我感兴趣的就是对应点的距离，也就是对角线的和，占全矩阵的和的比值。
+    metric = (np.trace(distanceMatrix)/distanceMatrix.shape[0]) / ((np.sum(distanceMatrix)-np.trace(distanceMatrix))/(distanceMatrix.shape[0]*distanceMatrix.shape[1]-distanceMatrix.shape[0]))
+    return metric
+
 def load_data(projDir, subject, sess, run, zscore=True, native=True):
     if native:
         imloc = '{}/derivatives/fmriprep/sub-{}/{}/func'.format(projDir, subject, sess)
@@ -134,6 +139,7 @@ def PhateShow(X,label=[],title=''):
 def loadBold500SubjectBrainData(subject1):
     destDir = '/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/brain'
     if os.path.exists(f"{destDir}/loadBold500SubjectBrainData_sub_{subject1}.pkl"):
+        print(f"loading {destDir}/loadBold500SubjectBrainData_sub_{subject1}.pkl")
         [training_sub1 , train_label_sub1, testing_sub1, test_label_sub1] = load_obj(f"{destDir}/loadBold500SubjectBrainData_sub_{subject1}")
     else:
         subspace = False
@@ -178,28 +184,47 @@ def loadBold500SubjectBrainData(subject1):
     return training_sub1 , train_label_sub1, testing_sub1, test_label_sub1
 
 def harmonicBetweenSubjects(subject1='CSI1',subject2='CSI2'):
+    resultDir = '/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/result/'
     training_sub1 , train_label_sub1, testing_sub1, test_label_sub1 = loadBold500SubjectBrainData(subject1)
     training_sub2 , train_label_sub2, testing_sub2, test_label_sub2 = loadBold500SubjectBrainData(subject2)
 
     # 进行不同被试数据之间的harmonic alignment
     x1,x2=training_sub1,training_sub2
-    n_filters = 8
+
+    # n_filters = 8
+    harmonic_pars={}
+    harmonic_pars['n_filters']=8
+    harmonic_pars['t']=1
+    harmonic_pars['overlap']=harmonic_pars['n_filters']
+    harmonic_pars['verbose']=0
+
+    harmonic_pars['knn_X']=20
+    harmonic_pars['knn_Y']=20
+    harmonic_pars['knn_XY']=10
+
+    harmonic_pars['decay_X']=20
+    harmonic_pars['decay_Y']=20
+    harmonic_pars['decay_XY']=10
+    harmonic_pars['n_pca_X']=100
+    harmonic_pars['n_pca_Y']=100
+    harmonic_pars['n_pca_XY']=None
+
     align_op = harmonicalignment.HarmonicAlignment(
-                int(n_filters), # 小波的数量
-                t=1, # 1 # 扩散量
-                overlap=n_filters, # 小波之间的重叠量
-                verbose=0,
+                harmonic_pars['n_filters'], # 小波的数量
+                t=harmonic_pars['t'], # 1 # 扩散量
+                overlap=harmonic_pars['overlap'], # 小波之间的重叠量
+                verbose=harmonic_pars['verbose'],
 
-                knn_X=20, # 20
-                knn_Y=20, # 20
-                knn_XY=10, # 10
+                knn_X=harmonic_pars['knn_X'], # 20
+                knn_Y=harmonic_pars['knn_Y'], # 20
+                knn_XY=harmonic_pars['knn_XY'], # 10
 
-                decay_X=20, # 20
-                decay_Y=20, # 20
-                decay_XY=10, # 10
-                n_pca_X=100, # 100
-                n_pca_Y=100, # 100
-                n_pca_XY=None, # None
+                decay_X=harmonic_pars['decay_X'], # 20
+                decay_Y=harmonic_pars['decay_Y'], # 20
+                decay_XY=harmonic_pars['decay_XY'], # 10
+                n_pca_X=harmonic_pars['n_pca_X'], # 100
+                n_pca_Y=harmonic_pars['n_pca_Y'], # 100
+                n_pca_XY=harmonic_pars['n_pca_XY'], # None
             )
     align_op.align(x1, x2)
     XY_aligned = align_op.diffusion_map()
@@ -208,60 +233,71 @@ def harmonicBetweenSubjects(subject1='CSI1',subject2='CSI2'):
     xb1_aligned=XY_aligned[:training_sub1.shape[0]]
     xb2_aligned=XY_aligned[training_sub1.shape[0]:]
 
+    save_obj([xb1_aligned,xb2_aligned,harmonic_pars], f"{resultDir}/harmonicResult_sub_{subject1}_{subject2}")
+
     alignmentMetric = getAlignmentMetric(xb1_aligned, xb2_aligned)
     print(f"alignmentMetric={alignmentMetric}")
 
-    label=[0]*training_sub1.shape[0]+[1]*training_sub1.shape[0]
-    _=PhateShow(XY_aligned,label=label,title=f'phate n_filters={n_filters}')
+    # 采用不同的染色方式来直观的判断 alignment 的效果好坏
+    label=[0]*training_sub1.shape[0]+[1]*training_sub2.shape[0]
+    # label = list(np.arange(training_sub1.shape[0]))+list(np.arange(training_sub1.shape[0]))
+    # label = [0]+[1]*(training_sub1.shape[0]-1)+[0]+[1]*(training_sub1.shape[0]-1)
 
-subject1 = 'CSI2'
-subject2 = 'CSI3'
+    _=PhateShow(XY_aligned,label=label,title=f'phate n_filters={harmonic_pars['n_filters']}')
+
+subject1 = sys.argv[1] #'CSI2'
+subject2 = sys.argv[2] #'CSI3'
+
 harmonicBetweenSubjects(subject1=subject1,subject2=subject2)
-# sbatch run_script.sh get_brain_features_all_regions.py
+# cd_ha; cd python ; sbatch run_script.sh get_brain_features_all_regions.py 
+# 18743938
 
 def loadModelData(model='Resnet',layerID=80,sub='CSI2'):
     scratch60='/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/'
     [activations, imageDataset] = load_obj(f'{scratch60}model/model_{model}-layerID_{layerID}-sub_{sub}') # 保存 图片array 的模型的第i层激活
 
     destDir = '/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/brain'
-    destMeta = '{}/{}_meta.csv'.format(destDir, sub)
-    y_sub = pd.read_csv(destMeta)
-    y_sub
 
-    # 为了测试的时候节约内存，只使用前200个数据
-    activations=activations[:200]
-    y_sub=y_sub[:200]
+    if os.path.exists(f"{destDir}/loadModelData_model_{model}-layerID_{layerID}-sub_{sub}.pkl"):
+        [training_model , train_label_model, testing_model, test_label_model] = load_obj(f"{destDir}/loadModelData_model_{model}-layerID_{layerID}-sub_{sub}")
+    else:
 
-    # 将 N x feature x feature x feature 的数据变成适应PCA的 n x feature 的数据
-    activations = activations.reshape(activations.shape[0],-1)
-    activations.shape
+        destMeta = '{}/{}_meta.csv'.format(destDir, sub)
+        y_sub = pd.read_csv(destMeta)
+        y_sub
 
-    # 删除包含缺失值的列。
-    activations = removeColumnWithNan(activations)
+        # 为了测试的时候节约内存，只使用前200个数据
+        activations=activations[:200]
+        y_sub=y_sub[:200]
 
-    # 根据session或者run来选择训练集和测试集
-    # trainingID = y_sub1['sess']!=y_sub1['sess'].iloc[-1]
-    # testingID = y_sub1['sess']==y_sub1['sess'].iloc[-1]
-    trainingID_sub1 = y_sub['run']!=y_sub['run'].iloc[-1]
-    testingID_sub1 = y_sub['run']==y_sub['run'].iloc[-1]
+        # 将 N x feature x feature x feature 的数据变成适应PCA的 n x feature 的数据
+        activations = activations.reshape(activations.shape[0],-1)
+        activations.shape
 
-    train_model = activations[trainingID_sub1]
-    train_label_model = y_sub[trainingID_sub1]
-    test_model = activations[testingID_sub1]
-    test_label_model = y_sub[testingID_sub1]
+        # 删除包含缺失值的列。
+        activations = removeColumnWithNan(activations)
 
-    print(f'train_model.shape={train_model.shape}')
-    print(f'test_model.shape={test_model.shape}')
+        # 根据session或者run来选择训练集和测试集
+        # trainingID = y_sub1['sess']!=y_sub1['sess'].iloc[-1]
+        # testingID = y_sub1['sess']==y_sub1['sess'].iloc[-1]
+        trainingID_sub1 = y_sub['run']!=y_sub['run'].iloc[-1]
+        testingID_sub1 = y_sub['run']==y_sub['run'].iloc[-1]
 
-    # PCA 降低维度到100维
-    training_model , testing_model = pca(X_train=train_model, X_test=test_model)
+        train_model = activations[trainingID_sub1]
+        train_label_model = y_sub[trainingID_sub1]
+        test_model = activations[testingID_sub1]
+        test_label_model = y_sub[testingID_sub1]
+
+        print(f'train_model.shape={train_model.shape}')
+        print(f'test_model.shape={test_model.shape}')
+
+        # PCA 降低维度到100维
+        training_model , testing_model = pca(X_train=train_model, X_test=test_model)
+
+        # 保存降维后的数据
+        save_obj([training_model , train_label_model, testing_model, test_label_model], f"{destDir}/loadModelData_model_{model}-layerID_{layerID}-sub_{sub}")
 
     return training_model , train_label_model, testing_model, test_label_model
-
-def getAlignmentMetric(xb1_aligned, xb2_aligned): # align的越好，对应的点的距离越近，因此 metric越小越好 。metric越接近1，就说明对齐得越差，因为对角线上的值和非对角线上的值的相对大小差不多。 因此metric的range是【0，正无穷】，超过1时就很差了
-    distanceMatrix = scipy.spatial.distance_matrix(xb1_aligned, xb2_aligned) # xb1_aligned 和 xb2_aligned 都有 M 个数据点，N维度，因此 distanceMatrix 就是 M x M 维度。我感兴趣的就是对应点的距离，也就是对角线的和，占全矩阵的和的比值。
-    metric = (np.trace(distanceMatrix)/distanceMatrix.shape[0]) / ((np.sum(distanceMatrix)-np.trace(distanceMatrix))/(distanceMatrix.shape[0]*distanceMatrix.shape[1]-distanceMatrix.shape[0]))
-    return metric
 
 def harmonicBetweenBrainAndModel(subject='CSI2',model='Resnet',layerID=80):
     training_brain , train_label_brain, testing_brain, test_label_brain = loadBold500SubjectBrainData(subject)

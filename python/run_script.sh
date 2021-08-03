@@ -10,5 +10,5 @@ module load AFNI ; module load FSL ; source /gpfs/milgram/apps/hpc.rhel7/softwar
 
 script=$1
 
-python -u $script
+python -u $script $2 $3 
 
