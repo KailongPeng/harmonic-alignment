@@ -136,11 +136,14 @@ def PhateShow(X,label=[],title=''):
         phate.plot.scatter2d(tree_phate,title=f"{title} knn={5} decay={40} t=auto",c=label)
     return tree_phate
 
-def loadBold500SubjectBrainData(subject1):
+def loadBold500SubjectBrainData(subject='CSI1', numberOfDatapoints=-1): # numberOfDatapoints：为了测试的时候节约内存，只使用前 numberOfDatapoints 个数据
+    subject1=subject
     destDir = '/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/brain'
-    if os.path.exists(f"{destDir}/loadBold500SubjectBrainData_sub_{subject1}.pkl"):
+
+    # 如果已经有现成的可输出的数据，就不需要再跑了，直接加载即可
+    if os.path.exists(f"{destDir}/loadBold500SubjectBrainData_sub_{subject1}_numberOfDatapoints_{numberOfDatapoints}.pkl"):
         print(f"loading {destDir}/loadBold500SubjectBrainData_sub_{subject1}.pkl")
-        [training_sub1 , train_label_sub1, testing_sub1, test_label_sub1] = load_obj(f"{destDir}/loadBold500SubjectBrainData_sub_{subject1}")
+        [training_sub1, train_label_sub1, testing_sub1, test_label_sub1] = load_obj(f"{destDir}/loadBold500SubjectBrainData_sub_{subject1}_numberOfDatapoints_{numberOfDatapoints}")
     else:
         subspace = False
         destMeta = '{}/{}_meta.csv'.format(destDir, subject1)
@@ -150,9 +153,12 @@ def loadBold500SubjectBrainData(subject1):
 
         X_sub1 = np.transpose(X_sub1,(3,0,1,2))
 
-        # # 为了测试的时候节约内存，只使用前200个数据
-        # y_sub1=y_sub1[:200]
-        # X_sub1=X_sub1[:200]
+        # # 为了测试的时候节约内存，只使用前200 numberOfDatapoints 个数据
+        if numberOfDatapoints == -1:
+            pass
+        else:
+            y_sub1=y_sub1[:numberOfDatapoints]
+            X_sub1=X_sub1[:numberOfDatapoints]
 
         # 将 N x voxel x voxel x voxel 的数据变成适应PCA的 n x voxel 的数据
         X_sub1 = X_sub1.reshape(X_sub1.shape[0],-1)
@@ -178,7 +184,7 @@ def loadBold500SubjectBrainData(subject1):
         training_sub1 , testing_sub1 = pca(X_train=train_sub1, X_test=test_sub1)
         
         # 保存pca后的数据
-        save_obj([training_sub1 , train_label_sub1, testing_sub1, test_label_sub1], f"{destDir}/loadBold500SubjectBrainData_sub_{subject1}")
+        save_obj([training_sub1 , train_label_sub1, testing_sub1, test_label_sub1], f"{destDir}/loadBold500SubjectBrainData_sub_{subject1}_numberOfDatapoints_{numberOfDatapoints}")
 
     # 输出降维后的数据和标签信息
     return training_sub1 , train_label_sub1, testing_sub1, test_label_sub1
@@ -187,28 +193,35 @@ def harmonicBetweenSubjects(subject1='CSI1',subject2='CSI2'):
     print(f"harmonicBetweenSubjects(subject1={subject1},subject2={subject2})")
 
     resultDir = '/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/result/'
-    training_sub1 , train_label_sub1, testing_sub1, test_label_sub1 = loadBold500SubjectBrainData(subject1)
-    training_sub2 , train_label_sub2, testing_sub2, test_label_sub2 = loadBold500SubjectBrainData(subject2)
+    # training_sub1 , train_label_sub1, testing_sub1, test_label_sub1 = loadBold500SubjectBrainData(subject = subject1, numberOfDatapoints=400)
+    # training_sub2 , train_label_sub2, testing_sub2, test_label_sub2 = loadBold500SubjectBrainData(subject = subject2, numberOfDatapoints=400)
+    from archive.loadBold500SubjectBrainData_strict_align import loadBold500SubjectBrainData_strict_align
+    [training_sub1 , train_label_sub1, testing_sub1, test_label_sub1],[training_sub2 , train_label_sub2, testing_sub2, test_label_sub2] = \
+        loadBold500SubjectBrainData(subject1=subject1, subject2=subject2, numberOfDatapoints=400):
 
     # 进行不同被试数据之间的harmonic alignment
     x1,x2=training_sub1,training_sub2
 
-    harmonic_pars={}
-    harmonic_pars['n_filters']=8
-    harmonic_pars['t']=1
+    harmonic_pars={
+        'n_filters':8,
+        't':1,
+        'verbose':0,
+
+        'knn_X':20,
+        'knn_Y':20,
+        'knn_XY':10,
+
+        'decay_X':20,
+        'decay_Y':20,
+        'decay_XY':10,
+
+        'n_pca_X':100,
+        'n_pca_Y':100,
+        'n_pca_XY':None,
+
+        'n_jobs':-1 # (默认: 1) 线程数。-1：使用所有可用的
+    }
     harmonic_pars['overlap']=harmonic_pars['n_filters']
-    harmonic_pars['verbose']=0
-
-    harmonic_pars['knn_X']=20
-    harmonic_pars['knn_Y']=20
-    harmonic_pars['knn_XY']=10
-
-    harmonic_pars['decay_X']=20
-    harmonic_pars['decay_Y']=20
-    harmonic_pars['decay_XY']=10
-    harmonic_pars['n_pca_X']=100
-    harmonic_pars['n_pca_Y']=100
-    harmonic_pars['n_pca_XY']=None
 
     align_op = harmonicalignment.HarmonicAlignment(
                 harmonic_pars['n_filters'], # 小波的数量
@@ -245,13 +258,13 @@ def harmonicBetweenSubjects(subject1='CSI1',subject2='CSI2'):
     # label = [0]+[1]*(training_sub1.shape[0]-1)+[0]+[1]*(training_sub1.shape[0]-1)
 
     _=PhateShow(XY_aligned,label=label,title=f"phate n_filters={harmonic_pars['n_filters']}")
+    _=PhateShow(x1,title=f"x1")
+    _=PhateShow(x2,title=f"x2")
 
 subject1 = sys.argv[1] #'CSI2'
 subject2 = sys.argv[2] #'CSI3'
 
 harmonicBetweenSubjects(subject1=subject1,subject2=subject2)
-# cd_ha; cd python ; sbatch run_script.sh get_brain_features_all_regions.py 
-# 18743938
 
 def loadModelData(model='Resnet',layerID=80,sub='CSI2'):
     scratch60='/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/'
@@ -371,6 +384,22 @@ def harmonicBetweenBrainAndModel(subject='CSI2',model='Resnet',layerID=80):
 
 
 
+
+    # harmonic_pars['verbose']=0
+    # harmonic_pars['n_filters']=8
+    # harmonic_pars['t']=1
+
+    # harmonic_pars['knn_X']=20
+    # harmonic_pars['knn_Y']=20
+    # harmonic_pars['knn_XY']=10
+
+    # harmonic_pars['decay_X']=20
+    # harmonic_pars['decay_Y']=20
+    # harmonic_pars['decay_XY']=10
+
+    # harmonic_pars['n_pca_X']=100
+    # harmonic_pars['n_pca_Y']=100
+    # harmonic_pars['n_pca_XY']=None
 
 
 
