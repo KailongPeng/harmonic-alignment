@@ -244,7 +244,7 @@ def harmonicBetweenSubjects(subject1='CSI1',subject2='CSI2'):
     # label = list(np.arange(training_sub1.shape[0]))+list(np.arange(training_sub1.shape[0]))
     # label = [0]+[1]*(training_sub1.shape[0]-1)+[0]+[1]*(training_sub1.shape[0]-1)
 
-    _=PhateShow(XY_aligned,label=label,title=f'phate n_filters={harmonic_pars['n_filters']}')
+    _=PhateShow(XY_aligned,label=label,title=f"phate n_filters={harmonic_pars['n_filters']}")
 
 subject1 = sys.argv[1] #'CSI2'
 subject2 = sys.argv[2] #'CSI3'
