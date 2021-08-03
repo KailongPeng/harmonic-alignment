@@ -165,7 +165,7 @@ def zscoreEachRun(X_sub2, y_sub2):
     print(f"X_sub2_normalized.shape={X_sub2_normalized.shape}")
     return X_sub2_normalized
 
-def findStrictCorrespondence(y_sub1="",X_sub2="",y_sub2=""):  # 根据给定的y_sub1，获取完全对应的y_sub2，以及完全对应的X_sub2，输出为X_sub2_strictAligned,y_sub2_strictAligned
+def findStrictCorrespondence(y_sub1=None,X_sub2=None,y_sub2=None):  # 根据给定的y_sub1，获取完全对应的y_sub2，以及完全对应的X_sub2，输出为X_sub2_strictAligned,y_sub2_strictAligned
     X_sub2_strictAligned = np.zeros((2)) # 初始化标准化结果的容器
     y_sub2_strictAligned = []
     for img in y_sub1['item']:
@@ -264,7 +264,7 @@ def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', n
             np.save(zscored,X_sub2)
 
         # 根据y_sub1获取完全对应的大脑数据
-        X_sub2, y_sub2 = findStrictCorrespondence(y_sub1="",X_sub2="",y_sub2="")
+        X_sub2, y_sub2 = findStrictCorrespondence(y_sub1=y_sub1,X_sub2=X_sub2,y_sub2=y_sub2)
         print(f"X_sub2.shape={X_sub2.shape}")
 
         # 为了测试的时候节约内存，只使用前200 numberOfDatapoints 个数据
