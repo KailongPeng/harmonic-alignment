@@ -13,8 +13,15 @@ import scipy
 import pickle
 from tqdm import tqdm
 from scipy.stats import zscore
-sys.path.append("/Users/kailong/Desktop/rtEnv/harmonic/harmonic-alignment/python/")
-from get_brain_features_all_regions import removeColumnWithNan
+# sys.path.append("/Users/kailong/Desktop/rtEnv/harmonic/harmonic-alignment/python/")
+# from get_brain_features_all_regions import removeColumnWithNan
+
+def removeColumnWithNan(a): # 删除包含缺失值的列。
+    #print(~np.isnan(a).any(axis=0))
+    t=a[:, ~np.isnan(a).any(axis=0)]
+    # print(t)
+    return t
+    
 def kp_and(a,b):
     return np.asarray(a) * np.asarray(b)
 
