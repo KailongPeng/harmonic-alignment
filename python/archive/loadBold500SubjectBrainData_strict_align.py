@@ -46,7 +46,7 @@ def findStrictCorrespondence(y_sub1="",X_sub2="",y_sub2=""):  # 根据给定的y
     print(f"X_sub2_strictAligned.shape={X_sub2_strictAligned.shape}")
     return X_sub2_strictAligned,y_sub2_strictAligned
 
-def loadBold500SubjectBrainData(subject1='CSI1', subject2='CSI2', numberOfDatapoints=-1):
+def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', numberOfDatapoints=-1):
     # numberOfDatapoints：为了测试的时候节约内存，只使用前 numberOfDatapoints 个数据
     destDir = '/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/brain'
 

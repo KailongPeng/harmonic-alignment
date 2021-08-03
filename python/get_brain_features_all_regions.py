@@ -197,7 +197,7 @@ def harmonicBetweenSubjects(subject1='CSI1',subject2='CSI2'):
     # training_sub2 , train_label_sub2, testing_sub2, test_label_sub2 = loadBold500SubjectBrainData(subject = subject2, numberOfDatapoints=400)
     from archive.loadBold500SubjectBrainData_strict_align import loadBold500SubjectBrainData_strict_align
     [training_sub1 , train_label_sub1, testing_sub1, test_label_sub1],[training_sub2 , train_label_sub2, testing_sub2, test_label_sub2] = \
-        loadBold500SubjectBrainData(subject1=subject1, subject2=subject2, numberOfDatapoints=400)
+        loadBold500SubjectBrainData_strict_align(subject1=subject1, subject2=subject2, numberOfDatapoints=400)
 
     # 进行不同被试数据之间的harmonic alignment
     x1,x2=training_sub1,training_sub2
