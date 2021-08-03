@@ -184,6 +184,8 @@ def loadBold500SubjectBrainData(subject1):
     return training_sub1 , train_label_sub1, testing_sub1, test_label_sub1
 
 def harmonicBetweenSubjects(subject1='CSI1',subject2='CSI2'):
+    print(f"harmonicBetweenSubjects(subject1={subject1},subject2={subject2})")
+
     resultDir = '/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/result/'
     training_sub1 , train_label_sub1, testing_sub1, test_label_sub1 = loadBold500SubjectBrainData(subject1)
     training_sub2 , train_label_sub2, testing_sub2, test_label_sub2 = loadBold500SubjectBrainData(subject2)
@@ -191,7 +193,6 @@ def harmonicBetweenSubjects(subject1='CSI1',subject2='CSI2'):
     # 进行不同被试数据之间的harmonic alignment
     x1,x2=training_sub1,training_sub2
 
-    # n_filters = 8
     harmonic_pars={}
     harmonic_pars['n_filters']=8
     harmonic_pars['t']=1
