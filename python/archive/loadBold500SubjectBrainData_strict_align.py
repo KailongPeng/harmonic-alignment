@@ -13,7 +13,8 @@ import scipy
 import pickle
 from tqdm import tqdm
 from scipy.stats import zscore
-
+sys.path.append("/Users/kailong/Desktop/rtEnv/harmonic/harmonic-alignment/python/")
+from get_brain_features_all_regions import removeColumnWithNan
 def kp_and(a,b):
     return np.asarray(a) * np.asarray(b)
 
