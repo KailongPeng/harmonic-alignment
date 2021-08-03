@@ -72,11 +72,17 @@ def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', n
         destMeta = '{}/{}_meta.csv'.format(destDir, subject1)
         destFeat = '{}/{}_feat.npy'.format(destDir, subject1) if subspace else '{}/{}_std.npy'.format(destDir, subject1)
         y_sub1 = pd.read_csv(destMeta)
-        X_sub1 = np.load(destFeat)
+        
+        zscored = f'{destDir}/{subject1}_zscoredEachRun.npy'
+        if os.path.exists(zscored):
+            X_sub1 =  np.load(zscored)
+        else:
+            X_sub1 = np.load(destFeat)
+            X_sub1 = np.transpose(X_sub1,(3,0,1,2))
 
-        X_sub1 = np.transpose(X_sub1,(3,0,1,2))
-
-        X_sub1,y_sub1 = zscoreEachRun(X_sub1,y_sub1)
+            X_sub1 = zscoreEachRun(X_sub1,y_sub1)
+            print(f"X_sub1.shape after zscoreEachRun = {X_sub1.shape}")
+            np.save(zscored,X_sub1)
 
         # # 为了测试的时候节约内存，只使用前200 numberOfDatapoints 个数据
         if numberOfDatapoints == -1:
@@ -121,11 +127,17 @@ def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', n
         destMeta = '{}/{}_meta.csv'.format(destDir, subject2)
         destFeat = '{}/{}_feat.npy'.format(destDir, subject2) if subspace else '{}/{}_std.npy'.format(destDir, subject2)
         y_sub2 = pd.read_csv(destMeta)
-        X_sub2 = np.load(destFeat)
 
-        X_sub2 = np.transpose(X_sub2,(3,0,1,2))
+        zscored = f'{destDir}/{subject2}_zscoredEachRun.npy'
+        if os.path.exists(zscored):
+            X_sub2 =  np.load(zscored)
+        else:
+            X_sub2 = np.load(destFeat)
+            X_sub2 = np.transpose(X_sub2,(3,0,1,2))
 
-        X_sub2,y_sub2 = zscoreEachRun(X_sub2,y_sub2)
+            X_sub2 = zscoreEachRun(X_sub2,y_sub2)
+            print(f"X_sub2.shape after zscoreEachRun = {X_sub2.shape}")
+            np.save(zscored,X_sub2)
 
         # 根据y_sub1获取完全对应的大脑数据
         X_sub2, y_sub2 = findStrictCorrespondence(y_sub1="",X_sub2="",y_sub2="")
