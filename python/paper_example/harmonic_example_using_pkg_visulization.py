@@ -4,11 +4,11 @@ from scipy import stats
 import numpy as np
 import harmonicalignment
 import harmonicalignment.math
-
 from shutil import copyfileobj
 from six.moves import urllib
 import os
 import matplotlib.pyplot as plt
+import phate
 
 def knnclassifier(X, X_labels, Y, Y_labels, knn): #输出的是测试的准确率
     knn_op = neighbors.KNeighborsClassifier(knn)
@@ -29,7 +29,12 @@ def overlapRatio(x1,x2,title='before alignment',nthFeature=0):
     t = np.concatenate([np.expand_dims(hist1[0], axis=0) , np.expand_dims(hist2[0], axis=0)],axis=0)
     _overlapRatio = np.sum(np.min(t,axis=0)) / np.sum(hist1[0])
     return _overlapRatio
-
+def show(X,labels,title=''):
+    plt.figure()
+    phate_operator = phate.PHATE(verbose=0)
+    tree_phate = phate_operator.fit_transform(X)
+    phate.plot.scatter2d(tree_phate,title=f"{title} knn={5} decay={15} t=auto gamma={1}",c=labels)
+    return tree_phate
 np.random.seed(42)
 digits = datasets.fetch_openml("mnist_784")
 labels = digits["target"]
@@ -61,7 +66,6 @@ diffusion_t = 1
 
 output = np.zeros((n_percentages, n_iters, n_wavelets, 2))
 # store metrics in here 在这里存储指标
-
 
 # 在一系列的概率分布[0. , 0.5, 1. ]中选一个，使用这一个比例从总共的 784 的n_features的列 不进行旋转； 当pct=0的时候完全不正交旋转，当pct=1的时候所有行正交旋转。
 
@@ -98,6 +102,13 @@ U_combined, S_combined = harmonicalignment.math.diffusionCoordinates(
 #  slice the labels 切分标签
 X1_labels = labels[X1_idx]
 X2_labels = labels[X2_idx]
+
+# 在原始的数据上进行phate
+_ = show(np.concatenate([X1,X2],axis=0),list(X1_labels)+list(X2_labels))
+# 在损坏的数据上进行phate
+_ = show(np.concatenate([X1,X2_rotate],axis=0),list(X1_labels)+list(X2_labels))
+
+
 combined_labels = np.concatenate([X1_labels, X2_labels])
 #  run pca and classify 运行PCA并且分类
 DM_combined = U_combined @ np.diag(np.exp(-S_combined)) # 对于 SVD 的输出的乘积就是 PCA 的结果
@@ -109,11 +120,11 @@ beforeprct = knnclassifier(
     5,
 ) # 对于 PCA 的结果进行knn分类，前1000个数据作为训练，后面的
 # for scale_idx in range(n_wavelets):
-n_filters = 2 #n_filters = wavelet_scales[scale_idx]
+n_filters = 4 #n_filters = wavelet_scales[scale_idx]
 align_op = harmonicalignment.HarmonicAlignment(
     n_filters,
     t=diffusion_t, # 1
-    overlap=2,
+    overlap=n_filters,
     verbose=1,
     knn_X=knn_1, # 20
     knn_Y=knn_2, # 20
@@ -136,27 +147,4 @@ print(f"beforeprct={beforeprct}")
 print(f"afterprct={afterprct}")
 _overlapRatio = overlapRatio(xb1_aligned,xb2_aligned,title=f'n_filters={n_filters}')
 print(f"n_filters={n_filters}, overlapRatio={_overlapRatio}")
-# output[p, iter_idx, scale_idx, 0] = beforeprct
-# output[p, iter_idx, scale_idx, 1] = afterprct
-
-# print(output)
-
-
-# 展示align前后的图像
-# align之前的图像
-plt.figure()
-plt.imshow(X1[0].reshape(28,-1))
-plt.title("before alignment x1")
-
-plt.figure()
-plt.imshow(X2_rotate[0].reshape(28,-1))
-plt.title("before alignment X2_rotate")
-
-plt.figure()
-plt.imshow(Z[0,:784].reshape(28,-1))
-plt.title("after alignment x1")
-
-plt.figure()
-plt.imshow(Z[n_samples,:784].reshape(28,-1))
-plt.title("after alignment X2_rotate")
-
+_=show(Z,list(X1_labels)+list(X2_labels),title=f'phate n_filters={n_filters}')

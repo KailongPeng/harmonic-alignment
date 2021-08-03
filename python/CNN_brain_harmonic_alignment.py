@@ -17,7 +17,8 @@
     from sklearn.model_selection import cross_val_predict
     from sklearn.cross_decomposition import PLSRegression
     from sklearn.metrics import mean_squared_error, r2_score
-
+    import harmonicalignment
+    
     def save_obj(obj, name):
         with open(name + '.pkl', 'wb') as f:
             pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)

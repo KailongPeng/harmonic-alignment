@@ -7,7 +7,7 @@ import matplotlib
 import matplotlib.cm as cmx
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.stats import zscore
-
+import phate
 def scatter3d(x,y,z, cs, colorsMap='jet'):
     cm = plt.get_cmap(colorsMap)
     cNorm = matplotlib.colors.Normalize(vmin=min(cs), vmax=max(cs))
@@ -24,6 +24,13 @@ def normalize(X): # 默认是对每一列单独标准化 mean=0 std=1
     _X = zscore(_X, axis=0)
     _X[np.isnan(_X)]=0
     return _X
+
+def show(X,labels,title=''):
+    plt.figure()
+    phate_operator = phate.PHATE(verbose=0)
+    tree_phate = phate_operator.fit_transform(X)
+    phate.plot.scatter2d(tree_phate,title=f"{title} knn={5} decay={40} t=auto",c=labels)
+    return tree_phate
 
 data=sklearn.datasets.make_swiss_roll(n_samples=2000, noise=0.1)    
 scatter3d(data[0][:,0],data[0][:,1],data[0][:,2],data[1])
@@ -77,7 +84,7 @@ for n_filters in wavelet_scales:
     align_op = harmonicalignment.HarmonicAlignment(
                 int(n_filters),
                 t=1, # 1
-                overlap=4,
+                overlap=n_filters,
                 verbose=0,
                 knn_X=20, # 20
                 knn_Y=20, # 20
@@ -110,3 +117,5 @@ for n_filters in wavelet_scales:
 
     _overlapRatio = overlapRatio(xb1_aligned,xb2_aligned,title=f'n_filters={n_filters}')
     print(f"n_filters={n_filters}, overlapRatio={_overlapRatio}")
+
+    _=show(XY_aligned,label,title=f'phate n_filters={n_filters}')
