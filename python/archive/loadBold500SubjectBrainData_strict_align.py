@@ -17,10 +17,10 @@ from scipy.stats import zscore
 def kp_and(a,b):
     return np.asarray(a) * np.asarray(b)
 
-def normalize(X):
-    _X=X.copy()
+def normalize(_X):
+    # _X=X.copy()
     _X = zscore(_X, axis=0)
-    _X[np.isnan(_X)]=0
+    # _X[np.isnan(_X)]=0
     return _X
 
 def zscoreEachRun(X_sub2, y_sub2):
