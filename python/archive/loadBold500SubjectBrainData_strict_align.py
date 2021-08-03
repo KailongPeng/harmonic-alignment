@@ -3,7 +3,7 @@ from scipy.stats import zscore
 
 def kp_and(a,b):
     return np.asarray(a) * np.asarray(b)
-    
+
 def normalize(X):
     _X=X.copy()
     _X = zscore(_X, axis=0)
@@ -115,7 +115,7 @@ def loadBold500SubjectBrainData(subject1='CSI1', subject2='CSI2', numberOfDatapo
         X_sub2,y_sub2 = zscoreEachRun(X_sub2,y_sub2)
 
         # 根据y_sub1获取完全对应的大脑数据
-        X_sub2, y_sub2 = findStrictCorrespondence(y_sub1="",X_sub2="",y_sub2=""):
+        X_sub2, y_sub2 = findStrictCorrespondence(y_sub1="",X_sub2="",y_sub2="")
         print(f"X_sub2.shape={X_sub2.shape}")
 
         # 为了测试的时候节约内存，只使用前200 numberOfDatapoints 个数据
