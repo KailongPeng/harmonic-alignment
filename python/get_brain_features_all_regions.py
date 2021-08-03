@@ -217,6 +217,7 @@ def harmonicBetweenSubjects(subject1='CSI1',subject2='CSI2'):
 subject1 = 'CSI2'
 subject2 = 'CSI3'
 harmonicBetweenSubjects(subject1=subject1,subject2=subject2)
+# sbatch run_script.sh get_brain_features_all_regions.py
 
 def loadModelData(model='Resnet',layerID=80,sub='CSI2'):
     scratch60='/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/'
