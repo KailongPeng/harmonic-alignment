@@ -182,6 +182,7 @@ def findStrictCorrespondence(y_sub1=None,X_sub2=None,y_sub2=None):  # 根据给�
         X_sub2_strictAligned = t if len(X_sub2_strictAligned.shape)<2 else np.concatenate((X_sub2_strictAligned,t),axis=0)
         
     print(f"X_sub2_strictAligned.shape={X_sub2_strictAligned.shape}")
+    print(f"y_sub2_strictAligned.shape={y_sub2_strictAligned.shape}")
     return X_sub2_strictAligned,y_sub2_strictAligned
 
 def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', numberOfDatapoints=-1):
@@ -265,14 +266,13 @@ def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', n
         # 根据y_sub1获取完全对应的大脑数据
         X_sub2, y_sub2 = findStrictCorrespondence(y_sub1=y_sub1,X_sub2=X_sub2,y_sub2=y_sub2)
         print(f"X_sub2.shape={X_sub2.shape}")
+        print(f"y_sub2.shape={y_sub2.shape}")
 
         # 为了测试的时候节约内存，只使用前200 numberOfDatapoints 个数据
         if numberOfDatapoints == -1:
             pass
         else:
             assert X_sub2.shape[0]==numberOfDatapoints
-            y_sub2=y_sub2[:numberOfDatapoints]
-            X_sub2=X_sub2[:numberOfDatapoints]
 
         # 将 N x voxel x voxel x voxel 的数据变成适应PCA的 n x voxel 的数据
         if len(X_sub2.shape)>2:
@@ -284,9 +284,13 @@ def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', n
         # 根据session或者run来选择训练集和测试集， 在loadBold500SubjectBrainData_strict_align这个特殊的函数中，我希望两个被试的数据是严格对齐的。
         trainingID_sub2 = trainingID_sub1 #y_sub2['sess']!=y_sub2['sess'].iloc[-1]
         testingID_sub2 = testingID_sub1 #y_sub2['sess']==y_sub2['sess'].iloc[-1]
+        print(f"len(trainingID_sub2)={len(trainingID_sub2)}")
+        print(f"len(testingID_sub2)={len(testingID_sub2)}")
         # trainingID_sub2 = y_sub2['run']!=y_sub2['run'].iloc[-1]
         # testingID_sub2 = y_sub2['run']==y_sub2['run'].iloc[-1]
 
+        print(f"X_sub2.shape={X_sub2.shape}")
+        print(f"y_sub2.shape={y_sub2.shape}")
         train_sub2 = X_sub2[trainingID_sub2]
         train_label_sub2 = y_sub2[trainingID_sub2]
         test_sub2 = X_sub2[testingID_sub2]
