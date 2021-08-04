@@ -199,6 +199,7 @@ def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', n
         
         zscored = f'{destDir}/{subject1}_zscoredEachRun.npy'
         if os.path.exists(zscored):
+            print(f"X_sub1 =  np.load({zscored})")
             X_sub1 =  np.load(zscored)
         else:
             X_sub1 = np.load(destFeat)
@@ -240,7 +241,7 @@ def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', n
         training_sub1 , testing_sub1 = pca(X_train=train_sub1, X_test=test_sub1)
         
         # 保存pca后的数据
-        save_obj([training_sub1 , train_label_sub1, testing_sub1, test_label_sub1], f"{destDir}/loadBold500SubjectBrainData_sub_{subject1}_numberOfDatapoints_{numberOfDatapoints}")
+        save_obj([training_sub1, train_label_sub1, testing_sub1, test_label_sub1], f"{destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject1}_numberOfDatapoints-{numberOfDatapoints}")
 
     # 如果已经有现成的可输出的数据，就不需要再跑了，直接加载即可
     if os.path.exists(f"{destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject2}_numberOfDatapoints-{numberOfDatapoints}.pkl"):
@@ -254,6 +255,7 @@ def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', n
 
         zscored = f'{destDir}/{subject2}_zscoredEachRun.npy'
         if os.path.exists(zscored):
+            print(f"X_sub2 =  np.load({zscored})")
             X_sub2 =  np.load(zscored)
         else:
             X_sub2 = np.load(destFeat)
@@ -300,8 +302,7 @@ def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', n
         training_sub2 , testing_sub2 = pca(X_train=train_sub2, X_test=test_sub2)
         
         # 保存pca后的数据
-        save_obj([training_sub2 , train_label_sub2, testing_sub2, test_label_sub2], f"{destDir}/loadBold500SubjectBrainData_sub_{subject2}_numberOfDatapoints_{numberOfDatapoints}")
-
+        save_obj([training_sub2, train_label_sub2, testing_sub2, test_label_sub2], f"{destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject2}_numberOfDatapoints-{numberOfDatapoints}")
 
     # 输出降维后的数据和标签信息
     return [training_sub1 , train_label_sub1, testing_sub1, test_label_sub1],[training_sub2 , train_label_sub2, testing_sub2, test_label_sub2]
