@@ -503,8 +503,8 @@ def loadModelData(model='Resnet',layerID=80,sub='CSI2', numberOfDatapoints=-1):
         activations = removeColumnWithNan(activations)
 
         # 根据session或者run来选择训练集和测试集
-        trainingID = y_sub['sess']!=y_sub['sess'].iloc[-1]
-        testingID = y_sub['sess']==y_sub['sess'].iloc[-1]
+        trainingID_sub1 = y_sub['sess']!=y_sub['sess'].iloc[-1]
+        testingID_sub1 = y_sub['sess']==y_sub['sess'].iloc[-1]
         # trainingID_sub1 = y_sub['run']!=y_sub['run'].iloc[-1]
         # testingID_sub1 = y_sub['run']==y_sub['run'].iloc[-1]
 
