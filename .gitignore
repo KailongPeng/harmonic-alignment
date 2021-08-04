@@ -1,1 +1,6 @@
 PHATE
+python/classification_models/
+*ipynb
+*.txt
+python/bold5000_images
+python/logs/
