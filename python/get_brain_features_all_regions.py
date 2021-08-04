@@ -180,7 +180,7 @@ def findStrictCorrespondence(y_sub1=None,X_sub2=None,y_sub2=None):  # 根据给�
         
         t = X_sub2[CorrespondingID][notRepID]
         X_sub2_strictAligned = t if len(X_sub2_strictAligned.shape)<2 else np.concatenate((X_sub2_strictAligned,t),axis=0)
-        
+    y_sub2_strictAligned = y_sub2_strictAligned.reset_index(drop=True)
     print(f"X_sub2_strictAligned.shape={X_sub2_strictAligned.shape}")
     print(f"y_sub2_strictAligned.shape={y_sub2_strictAligned.shape}")
     return X_sub2_strictAligned,y_sub2_strictAligned
