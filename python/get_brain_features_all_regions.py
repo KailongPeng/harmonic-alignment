@@ -438,52 +438,75 @@ def harmonicBetweenSubjects(subject1='CSI1',subject2='CSI2'):
     save_obj([xb1_aligned,xb2_aligned,harmonic_pars], f"{resultDir}/harmonicResult_sub_{subject1}_{subject2}")
 
     alignmentMetric = getAlignmentMetric(xb1_aligned, xb2_aligned)
-    print(f"alignmentMetric={alignmentMetric}")
+    print(f"alignmentMetric={alignmentMetric} 只有在严格对应的时候才有意义")
 
     # 采用不同的染色方式来直观的判断 alignment 的效果好坏
     label=[0]*training_sub1.shape[0]+[1]*training_sub2.shape[0]
     # label = list(np.arange(training_sub1.shape[0]))+list(np.arange(training_sub1.shape[0]))
     # label = [0]+[1]*(training_sub1.shape[0]-1)+[0]+[1]*(training_sub1.shape[0]-1)
+    def getcombined_label(train_label_sub1,train_label_sub2,numberOfCorredpondencePointShown=5): #找到完全对应的数据点，并且使用相同染色。由于太多颜色看不过来，因此使用了 数量限制numberOfCorredpondencePointShown
+        set1 = set(list(train_label_sub1['item']))
+        set2 = set(list(train_label_sub2['item']))
+        setShare = list(set1 & set2)
+        def getLabel(train_label_sub1, setShare):
+            label1 = np.zeros(len(train_label_sub1))
+            for i,j in enumerate(setShare):
+                label1[train_label_sub1['item']==j] = i+1
+            return label1
+        label1 = getLabel(train_label_sub1, setShare[:numberOfCorredpondencePointShown])
+        label2 = getLabel(train_label_sub2, setShare[:numberOfCorredpondencePointShown])
+        labels = list(label1)+list(label2)
+        return labels
+    label = getcombined_label(train_label_sub1,train_label_sub2)
 
     _=PhateShow(XY_aligned,label=label,title=f"phate n_filters={harmonic_pars['n_filters']}")
     _=PhateShow(x1,title=f"x1")
     _=PhateShow(x2,title=f"x2")
 
-subject1 = sys.argv[1] #'CSI2'
-subject2 = sys.argv[2] #'CSI3'
+# subject1 = sys.argv[1] #'CSI2'
+# subject2 = sys.argv[2] #'CSI3'
+# harmonicBetweenSubjects(subject1=subject1,subject2=subject2)
 
-harmonicBetweenSubjects(subject1=subject1,subject2=subject2)
-
-def loadModelData(model='Resnet',layerID=80,sub='CSI2'):
+def loadModelData(model='Resnet',layerID=80,sub='CSI2', numberOfDatapoints=-1):
     scratch60='/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/'
-    [activations, imageDataset] = load_obj(f'{scratch60}model/model_{model}-layerID_{layerID}-sub_{sub}') # 保存 图片array 的模型的第i层激活
+    brainDir = '/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/brain/'
+    modelDir = '/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/model/'
 
-    destDir = '/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/brain'
-
-    if os.path.exists(f"{destDir}/loadModelData_model_{model}-layerID_{layerID}-sub_{sub}.pkl"):
-        [training_model , train_label_model, testing_model, test_label_model] = load_obj(f"{destDir}/loadModelData_model_{model}-layerID_{layerID}-sub_{sub}")
+    if os.path.exists(f"{modelDir}/loadModelData_model_{model}-layerID_{layerID}-sub_{sub}_numberOfDatapoints_{numberOfDatapoints}.pkl"):
+        [training_model, train_label_model, testing_model, test_label_model] = load_obj(f"{modelDir}/loadModelData_model_{model}-layerID_{layerID}-sub_{sub}_numberOfDatapoints_{numberOfDatapoints}")
     else:
-
-        destMeta = '{}/{}_meta.csv'.format(destDir, sub)
+        destMeta = '{}/{}_meta.csv'.format(brainDir, sub)
         y_sub = pd.read_csv(destMeta)
-        y_sub
 
-        # 为了测试的时候节约内存，只使用前200个数据
-        activations=activations[:200]
-        y_sub=y_sub[:200]
+        zscored=f'{scratch60}model/model_{model}-layerID_{layerID}-sub_{sub}_zscored'
+        if os.path.exists(f"{zscored}.pkl"):
+            [activations, imageDataset] = load_obj(zscored) # 保存 图片array 的模型的第i层激活
+        else:
+            [activations, imageDataset] = load_obj(f'{scratch60}model/model_{model}-layerID_{layerID}-sub_{sub}') # 保存 图片array 的模型的第i层激活
 
-        # 将 N x feature x feature x feature 的数据变成适应PCA的 n x feature 的数据
-        activations = activations.reshape(activations.shape[0],-1)
-        activations.shape
+            # 将 N x feature x feature x feature 的数据变成适应PCA的 n x feature 的数据
+            if len(activations.shape)>2:
+                activations = activations.reshape(activations.shape[0],-1)
+
+            activations = normalize(activations)
+
+            save_obj([activations, imageDataset], zscored)
+
+        # 为了测试的时候节约内存，只使用前200 numberOfDatapoints 个数据
+        if numberOfDatapoints == -1:
+            pass
+        else:
+            activations=activations[:numberOfDatapoints]
+            y_sub=y_sub[:numberOfDatapoints]
 
         # 删除包含缺失值的列。
         activations = removeColumnWithNan(activations)
 
         # 根据session或者run来选择训练集和测试集
-        # trainingID = y_sub1['sess']!=y_sub1['sess'].iloc[-1]
-        # testingID = y_sub1['sess']==y_sub1['sess'].iloc[-1]
-        trainingID_sub1 = y_sub['run']!=y_sub['run'].iloc[-1]
-        testingID_sub1 = y_sub['run']==y_sub['run'].iloc[-1]
+        trainingID = y_sub1['sess']!=y_sub1['sess'].iloc[-1]
+        testingID = y_sub1['sess']==y_sub1['sess'].iloc[-1]
+        # trainingID_sub1 = y_sub['run']!=y_sub['run'].iloc[-1]
+        # testingID_sub1 = y_sub['run']==y_sub['run'].iloc[-1]
 
         train_model = activations[trainingID_sub1]
         train_label_model = y_sub[trainingID_sub1]
@@ -497,13 +520,14 @@ def loadModelData(model='Resnet',layerID=80,sub='CSI2'):
         training_model , testing_model = pca(X_train=train_model, X_test=test_model)
 
         # 保存降维后的数据
-        save_obj([training_model , train_label_model, testing_model, test_label_model], f"{destDir}/loadModelData_model_{model}-layerID_{layerID}-sub_{sub}")
+        save_obj([training_model, train_label_model, testing_model, test_label_model], f"{modelDir}/loadModelData_model_{model}-layerID_{layerID}-sub_{sub}_numberOfDatapoints_{numberOfDatapoints}")
 
     return training_model , train_label_model, testing_model, test_label_model
 
 def harmonicBetweenBrainAndModel(subject='CSI2',model='Resnet',layerID=80):
-    training_brain , train_label_brain, testing_brain, test_label_brain = loadBold500SubjectBrainData(subject)
-    training_model , train_label_model, testing_model, test_label_model = loadModelData(model='Resnet',layerID=80,sub='CSI2')
+    training_brain , train_label_brain, testing_brain, test_label_brain = loadBold500SubjectBrainData(subject, numberOfDatapoints=400)
+    training_model , train_label_model, testing_model, test_label_model = loadModelData(model=model,layerID=layerID,sub=subject, numberOfDatapoints=400)
+
     # 进行不同被试数据之间的harmonic alignment
     x1,x2=training_brain,training_model
     n_filters = 8
@@ -554,7 +578,10 @@ def harmonicBetweenBrainAndModel(subject='CSI2',model='Resnet',layerID=80):
 
     _=PhateShow(XY_aligned,label=label,title=f'phate n_filters={n_filters}')
 
-# harmonicBetweenBrainAndModel()
+subject = sys.argv[1] #'CSI2'
+layerID = int(sys.argv[2])
+model = 'Resnet'
+harmonicBetweenBrainAndModel(subject=subject,model=model,layerID=layerID)
 
 
 
