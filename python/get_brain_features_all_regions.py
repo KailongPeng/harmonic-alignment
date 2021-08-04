@@ -281,9 +281,9 @@ def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', n
         # 删除包含缺失值的列。
         X_sub2 = removeColumnWithNan(X_sub2)
 
-        # 根据session或者run来选择训练集和测试集
-        trainingID_sub2 = y_sub2['sess']!=y_sub2['sess'].iloc[-1]
-        testingID_sub2 = y_sub2['sess']==y_sub2['sess'].iloc[-1]
+        # 根据session或者run来选择训练集和测试集， 在loadBold500SubjectBrainData_strict_align这个特殊的函数中，我希望两个被试的数据是严格对齐的。
+        trainingID_sub2 = trainingID_sub1 #y_sub2['sess']!=y_sub2['sess'].iloc[-1]
+        testingID_sub2 = testingID_sub1 #y_sub2['sess']==y_sub2['sess'].iloc[-1]
         # trainingID_sub2 = y_sub2['run']!=y_sub2['run'].iloc[-1]
         # testingID_sub2 = y_sub2['run']==y_sub2['run'].iloc[-1]
 
@@ -297,6 +297,10 @@ def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', n
 
         # PCA 降低维度到100维
         training_sub2 , testing_sub2 = pca(X_train=train_sub2, X_test=test_sub2)
+
+        # 验证一下是否train_label_sub1的每一个值都与train_label_sub2相同
+        for i,j in zip(train_label_sub1['item'],train_label_sub2['item']):
+            print(i==j)
 
         # 保存pca后的数据
         save_obj([[training_sub1 , train_label_sub1, testing_sub1, test_label_sub1],[training_sub2 , train_label_sub2, testing_sub2, test_label_sub2]],\
