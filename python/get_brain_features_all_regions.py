@@ -166,6 +166,7 @@ def zscoreEachRun(X_sub2, y_sub2):
     return X_sub2_normalized
 
 def findStrictCorrespondence(y_sub1=None,X_sub2=None,y_sub2=None):  # 根据给定的y_sub1，获取完全对应的y_sub2，以及完全对应的X_sub2，输出为X_sub2_strictAligned,y_sub2_strictAligned
+    print(f"y_sub1.shape={y_sub1.shape}, X_sub2.shape={X_sub2.shape}, y_sub2.shape={y_sub2.shape}")
     X_sub2_strictAligned = np.zeros((2)) # 初始化标准化结果的容器
     y_sub2_strictAligned = []
     for img in y_sub1['item']:
@@ -191,7 +192,7 @@ def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', n
     if os.path.exists(f"{destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject1}-{subject2}_numberOfDatapoints-{numberOfDatapoints}.pkl"):
         print(f"loading {destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject1}-{subject2}_numberOfDatapoints-{numberOfDatapoints}.pkl")
 
-        [training_sub1 , train_label_sub1, testing_sub1, test_label_sub1],[training_sub2 , train_label_sub2, testing_sub2, test_label_sub2] = load_obj(
+        [[training_sub1 , train_label_sub1, testing_sub1, test_label_sub1],[training_sub2 , train_label_sub2, testing_sub2, test_label_sub2]] = load_obj(
             f"{destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject1}-{subject2}_numberOfDatapoints-{numberOfDatapoints}"
             )
     else:
@@ -298,7 +299,7 @@ def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', n
         training_sub2 , testing_sub2 = pca(X_train=train_sub2, X_test=test_sub2)
 
         # 保存pca后的数据
-        save_obj([training_sub1 , train_label_sub1, testing_sub1, test_label_sub1],[training_sub2 , train_label_sub2, testing_sub2, test_label_sub2],\
+        save_obj([[training_sub1 , train_label_sub1, testing_sub1, test_label_sub1],[training_sub2 , train_label_sub2, testing_sub2, test_label_sub2]],\
             f"{destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject1}-{subject2}_numberOfDatapoints-{numberOfDatapoints}"
             )
     
