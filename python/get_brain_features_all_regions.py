@@ -188,9 +188,12 @@ def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', n
     destDir = '/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/brain'
 
     # 如果已经有现成的可输出的数据，就不需要再跑了，直接加载即可
-    if os.path.exists(f"{destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject1}_numberOfDatapoints-{numberOfDatapoints}.pkl"):
-        print(f"loading {destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject1}_numberOfDatapoints-{numberOfDatapoints}.pkl")
-        [training_sub1, train_label_sub1, testing_sub1, test_label_sub1] = load_obj(f"{destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject1}_numberOfDatapoints-{numberOfDatapoints}")
+    if os.path.exists(f"{destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject1}-{subject2}_numberOfDatapoints-{numberOfDatapoints}.pkl"):
+        print(f"loading {destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject1}-{subject2}_numberOfDatapoints-{numberOfDatapoints}.pkl")
+
+        [training_sub1 , train_label_sub1, testing_sub1, test_label_sub1],[training_sub2 , train_label_sub2, testing_sub2, test_label_sub2] = load_obj(
+            f"{destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject1}-{subject2}_numberOfDatapoints-{numberOfDatapoints}"
+            )
     else:
         subspace = False
         destMeta = '{}/{}_meta.csv'.format(destDir, subject1)
@@ -233,21 +236,14 @@ def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', n
         train_label_sub1 = y_sub1[trainingID_sub1]
         test_sub1 = X_sub1[testingID_sub1]
         test_label_sub1 = y_sub1[testingID_sub1]
-
+        
         print(f'train_sub1.shape={train_sub1.shape}')
         print(f'test_sub1.shape={test_sub1.shape}')
 
         # PCA 降低维度到100维
         training_sub1 , testing_sub1 = pca(X_train=train_sub1, X_test=test_sub1)
-        
-        # 保存pca后的数据
-        save_obj([training_sub1, train_label_sub1, testing_sub1, test_label_sub1], f"{destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject1}_numberOfDatapoints-{numberOfDatapoints}")
 
-    # 如果已经有现成的可输出的数据，就不需要再跑了，直接加载即可
-    if os.path.exists(f"{destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject2}_numberOfDatapoints-{numberOfDatapoints}.pkl"):
-        print(f"loading {destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject2}_numberOfDatapoints-{numberOfDatapoints}.pkl")
-        [training_sub2, train_label_sub2, testing_sub2, test_label_sub2] = load_obj(f"{destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject2}_numberOfDatapoints-{numberOfDatapoints}")
-    else:
+        # 相同的代码针对 subject2 重复一遍
         subspace = False
         destMeta = '{}/{}_meta.csv'.format(destDir, subject2)
         destFeat = '{}/{}_feat.npy'.format(destDir, subject2) if subspace else '{}/{}_std.npy'.format(destDir, subject2)
@@ -300,10 +296,12 @@ def loadBold500SubjectBrainData_strict_align(subject1='CSI1', subject2='CSI2', n
 
         # PCA 降低维度到100维
         training_sub2 , testing_sub2 = pca(X_train=train_sub2, X_test=test_sub2)
-        
-        # 保存pca后的数据
-        save_obj([training_sub2, train_label_sub2, testing_sub2, test_label_sub2], f"{destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject2}_numberOfDatapoints-{numberOfDatapoints}")
 
+        # 保存pca后的数据
+        save_obj([training_sub1 , train_label_sub1, testing_sub1, test_label_sub1],[training_sub2 , train_label_sub2, testing_sub2, test_label_sub2],\
+            f"{destDir}/loadBold500SubjectBrainData_strictAlign_sub-{subject1}-{subject2}_numberOfDatapoints-{numberOfDatapoints}"
+            )
+    
     # 输出降维后的数据和标签信息
     return [training_sub1 , train_label_sub1, testing_sub1, test_label_sub1],[training_sub2 , train_label_sub2, testing_sub2, test_label_sub2]
 
