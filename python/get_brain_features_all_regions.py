@@ -130,7 +130,7 @@ def pca(X_train=None, X_test=None):
 
 def PhateShow(X,label=[],title=''):
     plt.figure()
-    phate_operator = phate.PHATE(verbose=0)
+    phate_operator = phate.PHATE(verbose=0) # knn= ,decay=
     tree_phate = phate_operator.fit_transform(X)
     if len(label)==0:
         phate.plot.scatter2d(tree_phate,title=f"{title} knn={5} decay={40} t=auto")
@@ -320,16 +320,26 @@ def loadBold500SubjectBrainData(subject='CSI1', numberOfDatapoints=-1): # number
 
     # 如果已经有现成的可输出的数据，就不需要再跑了，直接加载即可
     if os.path.exists(f"{destDir}/loadBold500SubjectBrainData_sub_{subject1}_numberOfDatapoints_{numberOfDatapoints}.pkl"):
-        print(f"loading {destDir}/loadBold500SubjectBrainData_sub_{subject1}.pkl")
-        [training_sub1, train_label_sub1, testing_sub1, test_label_sub1] = load_obj(f"{destDir}/loadBold500SubjectBrainData_sub_{subject1}_numberOfDatapoints_{numberOfDatapoints}")
+        print(f"loading {destDir}/loadBold500SubjectBrainData_sub_{subject1}_numberOfDatapoints_{numberOfDatapoints}.pkl")
+        [training_sub1, train_label_sub1, testing_sub1, test_label_sub1] = load_obj(\
+                      f"{destDir}/loadBold500SubjectBrainData_sub_{subject1}_numberOfDatapoints_{numberOfDatapoints}")
     else:
         subspace = False
         destMeta = '{}/{}_meta.csv'.format(destDir, subject1)
         destFeat = '{}/{}_feat.npy'.format(destDir, subject1) if subspace else '{}/{}_std.npy'.format(destDir, subject1)
         y_sub1 = pd.read_csv(destMeta)
-        X_sub1 = np.load(destFeat)
 
-        X_sub1 = np.transpose(X_sub1,(3,0,1,2))
+        zscored = f'{destDir}/{subject1}_zscoredEachRun.npy'
+        if os.path.exists(zscored):
+            print(f"X_sub1 =  np.load({zscored})")
+            X_sub1 =  np.load(zscored)
+        else:
+            X_sub1 = np.load(destFeat)
+            X_sub1 = np.transpose(X_sub1,(3,0,1,2))
+
+            X_sub1 = zscoreEachRun(X_sub1,y_sub1)
+            print(f"X_sub1.shape after zscoreEachRun = {X_sub1.shape}")
+            np.save(zscored,X_sub1)
 
         # # 为了测试的时候节约内存，只使用前200 numberOfDatapoints 个数据
         if numberOfDatapoints == -1:
@@ -339,7 +349,8 @@ def loadBold500SubjectBrainData(subject='CSI1', numberOfDatapoints=-1): # number
             X_sub1=X_sub1[:numberOfDatapoints]
 
         # 将 N x voxel x voxel x voxel 的数据变成适应PCA的 n x voxel 的数据
-        X_sub1 = X_sub1.reshape(X_sub1.shape[0],-1)
+        if len(X_sub1.shape)>2:
+            X_sub1 = X_sub1.reshape(X_sub1.shape[0],-1)
 
         # 删除包含缺失值的列。
         X_sub1 = removeColumnWithNan(X_sub1)
@@ -362,7 +373,7 @@ def loadBold500SubjectBrainData(subject='CSI1', numberOfDatapoints=-1): # number
         training_sub1 , testing_sub1 = pca(X_train=train_sub1, X_test=test_sub1)
         
         # 保存pca后的数据
-        save_obj([training_sub1 , train_label_sub1, testing_sub1, test_label_sub1], f"{destDir}/loadBold500SubjectBrainData_sub_{subject1}_numberOfDatapoints_{numberOfDatapoints}")
+        save_obj([training_sub1, train_label_sub1, testing_sub1, test_label_sub1], f"{destDir}/loadBold500SubjectBrainData_sub_{subject1}_numberOfDatapoints_{numberOfDatapoints}")
 
     # 输出降维后的数据和标签信息
     return training_sub1 , train_label_sub1, testing_sub1, test_label_sub1
@@ -371,10 +382,10 @@ def harmonicBetweenSubjects(subject1='CSI1',subject2='CSI2'):
     print(f"harmonicBetweenSubjects(subject1={subject1},subject2={subject2})")
 
     resultDir = '/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/result/'
-    # training_sub1 , train_label_sub1, testing_sub1, test_label_sub1 = loadBold500SubjectBrainData(subject = subject1, numberOfDatapoints=400)
-    # training_sub2 , train_label_sub2, testing_sub2, test_label_sub2 = loadBold500SubjectBrainData(subject = subject2, numberOfDatapoints=400)
-    [training_sub1 , train_label_sub1, testing_sub1, test_label_sub1],[training_sub2 , train_label_sub2, testing_sub2, test_label_sub2] = \
-        loadBold500SubjectBrainData_strict_align(subject1=subject1, subject2=subject2, numberOfDatapoints=400)
+    training_sub1, train_label_sub1, testing_sub1, test_label_sub1 = loadBold500SubjectBrainData(subject = subject1, numberOfDatapoints=400)
+    training_sub2, train_label_sub2, testing_sub2, test_label_sub2 = loadBold500SubjectBrainData(subject = subject2, numberOfDatapoints=400)
+    # [training_sub1 , train_label_sub1, testing_sub1, test_label_sub1],[training_sub2 , train_label_sub2, testing_sub2, test_label_sub2] = \
+    #     loadBold500SubjectBrainData_strict_align(subject1=subject1, subject2=subject2, numberOfDatapoints=400)
 
     # 进行不同被试数据之间的harmonic alignment
     x1,x2=training_sub1,training_sub2
