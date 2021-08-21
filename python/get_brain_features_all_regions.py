@@ -27,12 +27,52 @@ def save_obj(obj, name):
 def zscore_data(data):
     return (data-np.expand_dims(np.mean(data,3), 3))/np.expand_dims(np.std(data,3),3)
 
+def removeColumnWithNan(a): # 删除包含缺失值的列。
+    #print(~np.isnan(a).any(axis=0))
+    t=a[:, ~np.isnan(a).any(axis=0)]
+    # print(t)
+    return t
+
+def kp_and(a,b):
+    return np.asarray(a) * np.asarray(b)
+
+def normalize(_X):
+    # _X=X.copy()
+    _X = zscore(_X, axis=0)
+    # _X[np.isnan(_X)]=0
+    return _X
+
+def zscoreEachRun(X_sub2, y_sub2):
+    if len(X_sub2.shape)>2:
+        X_sub2 = X_sub2.reshape(X_sub2.shape[0],-1)
+    X_sub2_normalized=np.zeros((2)) # 初始化标准化结果的容器
+    SessionList = np.unique(list(y_sub2["sess"]))
+    SessionList.sort()
+    for sess in tqdm(SessionList):
+        runList = np.unique(y_sub2[y_sub2['sess']==sess]['run'])
+        # print(runList)
+        for run in runList:
+            ID = kp_and(y_sub2['sess']==sess, y_sub2['run']==run)
+            # y_sub2[ID]
+            # print(X_sub2[ID].shape)
+            t = normalize(X_sub2[ID])
+            X_sub2_normalized = t if len(X_sub2_normalized.shape)<2 else np.concatenate((X_sub2_normalized,t),axis=0)
+    print(f"X_sub2_normalized.shape={X_sub2_normalized.shape}")
+    return X_sub2_normalized
+
+def pca(X_train=None, X_test=None):
+    PCA_sub1 = activation_PCA()
+    PCA_sub1.fit(X_train=X_train, X_test=X_test, num_components=100)
+    training_sub1 = PCA_sub1.pcs_train
+    testing_sub1 = PCA_sub1.pcs_test
+    return training_sub1 , testing_sub1
+
 def getAlignmentMetric(xb1_aligned, xb2_aligned): # align的越好，对应的点的距离越近，因此 metric越小越好 。metric越接近1，就说明对齐得越差，因为对角线上的值和非对角线上的值的相对大小差不多。 因此metric的range是【0，正无穷】，超过1时就很差了
     distanceMatrix = scipy.spatial.distance_matrix(xb1_aligned, xb2_aligned) # xb1_aligned 和 xb2_aligned 都有 M 个数据点，N维度，因此 distanceMatrix 就是 M x M 维度。我感兴趣的就是对应点的距离，也就是对角线的和，占全矩阵的和的比值。
     metric = (np.trace(distanceMatrix)/distanceMatrix.shape[0]) / ((np.sum(distanceMatrix)-np.trace(distanceMatrix))/(distanceMatrix.shape[0]*distanceMatrix.shape[1]-distanceMatrix.shape[0]))
     return metric
 
-def load_data(projDir, subject, sess, run, zscore=True, native=True):
+def load_data(projDir, subject, sess, run, zscore=True, native=True): # 这是加载大脑数据的函数
     if native:
         imloc = '{}/derivatives/fmriprep/sub-{}/{}/func'.format(projDir, subject, sess)
         imfile = 'sub-{}_{}_task-5000scenes_run-{}_bold_space-T1w_preproc.nii.gz'.format(subject, sess, run)
@@ -99,12 +139,6 @@ def get_brain_features_for_subject(subject):
 # for subject in subjects:
 #     get_brain_features_for_subject.remote(subject)
 
-def removeColumnWithNan(a): # 删除包含缺失值的列。
-    #print(~np.isnan(a).any(axis=0))
-    t=a[:, ~np.isnan(a).any(axis=0)]
-    # print(t)
-    return t
-
 class activation_PCA(): #使用PCA降维到1000维度，降维前归一化。
     def fit(self, X_train=0, X_test=0, num_components=100):
         n_samples, n_features = X_train.shape
@@ -121,13 +155,6 @@ class activation_PCA(): #使用PCA降维到1000维度，降维前归一化。
         self.pcs_train = self.model.transform(X_train)  # principle components are the coefficients that transform original data into principal vectors space.
         self.pcs_test = self.model.transform(X_test)
 
-def pca(X_train=None, X_test=None):
-    PCA_sub1 = activation_PCA()
-    PCA_sub1.fit(X_train=X_train, X_test=X_test, num_components=100)
-    training_sub1 = PCA_sub1.pcs_train
-    testing_sub1 = PCA_sub1.pcs_test
-    return training_sub1 , testing_sub1
-
 def PhateShow(X,label=[],title=''):
     plt.figure()
     phate_operator = phate.PHATE(verbose=0) # knn= ,decay=
@@ -137,33 +164,6 @@ def PhateShow(X,label=[],title=''):
     else:
         phate.plot.scatter2d(tree_phate,title=f"{title} knn={5} decay={40} t=auto",c=label)
     return tree_phate
-
-def kp_and(a,b):
-    return np.asarray(a) * np.asarray(b)
-
-def normalize(_X):
-    # _X=X.copy()
-    _X = zscore(_X, axis=0)
-    # _X[np.isnan(_X)]=0
-    return _X
-
-def zscoreEachRun(X_sub2, y_sub2):
-    if len(X_sub2.shape)>2:
-        X_sub2 = X_sub2.reshape(X_sub2.shape[0],-1)
-    X_sub2_normalized=np.zeros((2)) # 初始化标准化结果的容器
-    SessionList = np.unique(list(y_sub2["sess"]))
-    SessionList.sort()
-    for sess in tqdm(SessionList):
-        runList = np.unique(y_sub2[y_sub2['sess']==sess]['run'])
-        # print(runList)
-        for run in runList:
-            ID = kp_and(y_sub2['sess']==sess, y_sub2['run']==run)
-            # y_sub2[ID]
-            # print(X_sub2[ID].shape)
-            t = normalize(X_sub2[ID])
-            X_sub2_normalized = t if len(X_sub2_normalized.shape)<2 else np.concatenate((X_sub2_normalized,t),axis=0)
-    print(f"X_sub2_normalized.shape={X_sub2_normalized.shape}")
-    return X_sub2_normalized
 
 def findStrictCorrespondence(y_sub1=None,X_sub2=None,y_sub2=None):  # 根据给定的y_sub1，获取完全对应的y_sub2，以及完全对应的X_sub2，输出为X_sub2_strictAligned,y_sub2_strictAligned
     print(f"y_sub1.shape={y_sub1.shape}, X_sub2.shape={X_sub2.shape}, y_sub2.shape={y_sub2.shape}")
@@ -378,14 +378,14 @@ def loadBold500SubjectBrainData(subject='CSI1', numberOfDatapoints=-1): # number
     # 输出降维后的数据和标签信息
     return training_sub1 , train_label_sub1, testing_sub1, test_label_sub1
 
-def harmonicBetweenSubjects(subject1='CSI1',subject2='CSI2'):
+def harmonicBetweenSubjects(subject1='CSI1',subject2='CSI2'): # 进行两个被试之间的align 
     print(f"harmonicBetweenSubjects(subject1={subject1},subject2={subject2})")
 
     resultDir = '/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/result/'
-    training_sub1, train_label_sub1, testing_sub1, test_label_sub1 = loadBold500SubjectBrainData(subject = subject1, numberOfDatapoints=400)
-    training_sub2, train_label_sub2, testing_sub2, test_label_sub2 = loadBold500SubjectBrainData(subject = subject2, numberOfDatapoints=400)
-    # [training_sub1 , train_label_sub1, testing_sub1, test_label_sub1],[training_sub2 , train_label_sub2, testing_sub2, test_label_sub2] = \
-    #     loadBold500SubjectBrainData_strict_align(subject1=subject1, subject2=subject2, numberOfDatapoints=400)
+    # training_sub1, train_label_sub1, testing_sub1, test_label_sub1 = loadBold500SubjectBrainData(subject = subject1, numberOfDatapoints=400)
+    # training_sub2, train_label_sub2, testing_sub2, test_label_sub2 = loadBold500SubjectBrainData(subject = subject2, numberOfDatapoints=400)
+    [training_sub1 , train_label_sub1, testing_sub1, test_label_sub1],[training_sub2 , train_label_sub2, testing_sub2, test_label_sub2] = \
+        loadBold500SubjectBrainData_strict_align(subject1=subject1, subject2=subject2, numberOfDatapoints=400)
 
     # 进行不同被试数据之间的harmonic alignment
     x1,x2=training_sub1,training_sub2
@@ -463,9 +463,11 @@ def harmonicBetweenSubjects(subject1='CSI1',subject2='CSI2'):
     _=PhateShow(x1,title=f"x1")
     _=PhateShow(x2,title=f"x2")
 
-# subject1 = sys.argv[1] #'CSI2'
-# subject2 = sys.argv[2] #'CSI3'
-# harmonicBetweenSubjects(subject1=subject1,subject2=subject2)
+tag=sys.argv[3]
+if tag=="harmonicBetweenSubjects":
+    subject1 = sys.argv[1] #'CSI2'
+    subject2 = sys.argv[2] #'CSI3'
+    harmonicBetweenSubjects(subject1=subject1,subject2=subject2)
 
 def loadModelData(model='Resnet',layerID=80,sub='CSI2', numberOfDatapoints=-1):
     scratch60='/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/'
@@ -524,7 +526,7 @@ def loadModelData(model='Resnet',layerID=80,sub='CSI2', numberOfDatapoints=-1):
 
     return training_model , train_label_model, testing_model, test_label_model
 
-def harmonicBetweenBrainAndModel(subject='CSI2',model='Resnet',layerID=80):
+def harmonicBetweenBrainAndModel(subject='CSI2',model='Resnet',layerID=80): # 进行被试和模型之间的align
     training_brain , train_label_brain, testing_brain, test_label_brain = loadBold500SubjectBrainData(subject, numberOfDatapoints=400)
     training_model , train_label_model, testing_model, test_label_model = loadModelData(model=model,layerID=layerID,sub=subject, numberOfDatapoints=400)
 
@@ -537,7 +539,7 @@ def harmonicBetweenBrainAndModel(subject='CSI2',model='Resnet',layerID=80):
                 overlap=n_filters,
                 verbose=0,
                 knn_X=20, # 20
-                knn_Y=20, # 20
+                knn_Y=4, # 20
                 knn_XY=10, # 10
                 decay_X=20, # 20
                 decay_Y=20, # 20
@@ -557,31 +559,38 @@ def harmonicBetweenBrainAndModel(subject='CSI2',model='Resnet',layerID=80):
     print(f"alignmentMetric={alignmentMetric}")
 
     # brain 数据label为0，model数据label为1
-    # label=[0]*training_brain.shape[0]+[1]*training_brain.shape[0]
+    label=[0]*training_brain.shape[0]+[1]*training_model.shape[0]
 
     # 根据不同的图片来源的数据来标记图片，从而知道详细的align是否成功
-    label=[]
-    for i in range(len(train_label_brain)):
-        if 'imagenet' in train_label_brain['cat'][i]:
-            label.append(1)
-        elif 'coco' in train_label_brain['cat'][i]:
-            label.append(2)
-        elif 'scenes' in train_label_brain['cat'][i]:
-            label.append(3)
-    for i in range(len(train_label_model)):
-        if 'imagenet' in train_label_brain['cat'][i]:
-            label.append(1)
-        elif 'coco' in train_label_brain['cat'][i]:
-            label.append(2)
-        elif 'scenes' in train_label_brain['cat'][i]:
-            label.append(3)
+    def model_label(train_label_brain):
+        label=[]
+        for i in range(len(train_label_brain)):
+            if 'imagenet' in train_label_brain['cat'][i]:
+                label.append(1)
+            elif 'coco' in train_label_brain['cat'][i]:
+                label.append(2)
+            elif 'scenes' in train_label_brain['cat'][i]:
+                label.append(3)
+        for i in range(len(train_label_model)):
+            if 'imagenet' in train_label_brain['cat'][i]:
+                label.append(1)
+            elif 'coco' in train_label_brain['cat'][i]:
+                label.append(2)
+            elif 'scenes' in train_label_brain['cat'][i]:
+                label.append(3)
+        return label
+    # label = model_label(train_label_brain)
 
     _=PhateShow(XY_aligned,label=label,title=f'phate n_filters={n_filters}')
 
-subject = sys.argv[1] #'CSI2'
-layerID = int(sys.argv[2])
-model = 'Resnet'
-harmonicBetweenBrainAndModel(subject=subject,model=model,layerID=layerID)
+    _=PhateShow(x1,title=f"brain")
+    _=PhateShow(x2,title=f"model")
+
+if tag=="harmonicBetweenBrainAndModel":
+    subject = sys.argv[1] #'CSI2'
+    layerID = int(sys.argv[2])
+    model = 'Resnet'
+    harmonicBetweenBrainAndModel(subject=subject,model=model,layerID=layerID)
 
 
 
@@ -600,42 +609,21 @@ harmonicBetweenBrainAndModel(subject=subject,model=model,layerID=layerID)
 
 
 
-    # harmonic_pars['verbose']=0
-    # harmonic_pars['n_filters']=8
-    # harmonic_pars['t']=1
+# harmonic_pars['verbose']=0
+# harmonic_pars['n_filters']=8
+# harmonic_pars['t']=1
 
-    # harmonic_pars['knn_X']=20
-    # harmonic_pars['knn_Y']=20
-    # harmonic_pars['knn_XY']=10
+# harmonic_pars['knn_X']=20
+# harmonic_pars['knn_Y']=20
+# harmonic_pars['knn_XY']=10
 
-    # harmonic_pars['decay_X']=20
-    # harmonic_pars['decay_Y']=20
-    # harmonic_pars['decay_XY']=10
+# harmonic_pars['decay_X']=20
+# harmonic_pars['decay_Y']=20
+# harmonic_pars['decay_XY']=10
 
-    # harmonic_pars['n_pca_X']=100
-    # harmonic_pars['n_pca_Y']=100
-    # harmonic_pars['n_pca_XY']=None
-
-
-
-# def harmonicBetweenSubjects(subject1='CSI1',subject2='CSI2'):
-#     destDir = '/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/brain'
-#     subspace = False
-
-#     destMeta = '{}/{}_meta.csv'.format(destDir, subject1)
-#     destFeat = '{}/{}_feat.npy'.format(destDir, subject1) if subspace else '{}/{}_std.npy'.format(destDir, subject1)
-#     y_sub1 = pd.read_csv(destMeta)
-#     X_sub1 = np.load(destFeat)
-
-#     destMeta = '{}/{}_meta.csv'.format(destDir, subject2)
-#     destFeat = '{}/{}_feat.npy'.format(destDir, subject2) if subspace else '{}/{}_std.npy'.format(destDir, subject2)
-#     y_sub2 = pd.read_csv(destMeta)
-#     X_sub2 = np.load(destFeat)
-
-#     X_sub1 = np.transpose(X_sub1,(3,0,1,2))
-#     X_sub2 = np.transpose(X_sub2,(3,0,1,2))
-
-
+# harmonic_pars['n_pca_X']=100
+# harmonic_pars['n_pca_Y']=100
+# harmonic_pars['n_pca_XY']=None
 
 
 
@@ -657,3 +645,21 @@ harmonicBetweenBrainAndModel(subject=subject,model=model,layerID=layerID)
     #         region_voxels = np.array(region_voxels)
     #         del brain
     #         np.save(f'{stimfeatures_directory}/{region}/brainfeat_{subject}.npy', region_voxels)
+
+    
+    # def harmonicBetweenSubjects(subject1='CSI1',subject2='CSI2'):
+    #     destDir = '/gpfs/milgram/scratch60/turk-browne/kp578/harmonic/brain'
+    #     subspace = False
+
+    #     destMeta = '{}/{}_meta.csv'.format(destDir, subject1)
+    #     destFeat = '{}/{}_feat.npy'.format(destDir, subject1) if subspace else '{}/{}_std.npy'.format(destDir, subject1)
+    #     y_sub1 = pd.read_csv(destMeta)
+    #     X_sub1 = np.load(destFeat)
+
+    #     destMeta = '{}/{}_meta.csv'.format(destDir, subject2)
+    #     destFeat = '{}/{}_feat.npy'.format(destDir, subject2) if subspace else '{}/{}_std.npy'.format(destDir, subject2)
+    #     y_sub2 = pd.read_csv(destMeta)
+    #     X_sub2 = np.load(destFeat)
+
+    #     X_sub1 = np.transpose(X_sub1,(3,0,1,2))
+    #     X_sub2 = np.transpose(X_sub2,(3,0,1,2))
